@@ -10,13 +10,14 @@
 #define Relay_Warning 13
 const int data;
 
-const char APN[] = "3gprs";
-const char URL[] = "http://smart-tourism.silka-itera.science/api/vehicle/status-test/2";
+const char APN[] = "byu";
+const char URL[] = "http://34.101.77.77/api/vehicle/status/6";
 
 SIM800L* sim800l;
 
 void setup() {  
   pinMode(Relay_Lock, OUTPUT);
+  
   pinMode(Relay_Warning, OUTPUT);
   
   // Initialize Serial Monitor for debugging
@@ -77,10 +78,10 @@ void loop() {
      if(response.equals(Status_1)){
       Serial.println("relay kunci on");
       digitalWrite(Relay_Lock, HIGH);
-          uint16_t rc = sim800l->doGet("http://smart-tourism.silka-itera.science/api/vehicle/status-gmaps/2", 10000);
+          uint16_t rc = sim800l->doPost("http://34.101.77.77/api/vehicle/status-gmaps/1?lat=-4.54208&long=105.09133","application/json", "{}", 10000, 10000);
            if(rc == 200) {
             // Success, output the data received on the serial
-            Serial.print(F("HTTP GET successful ("));
+            Serial.print(F("HTTP POST successful ("));
             Serial.print(sim800l->getDataSizeReceived());
             Serial.println(F(" bytes)"));
             Serial.print(F("Received : "));
@@ -91,6 +92,10 @@ void loop() {
                   Serial.println("relay bel aktif");
                   digitalWrite(Relay_Warning, HIGH);
                   delay(1000);
+                   digitalWrite(Relay_Warning, LOW);
+                  delay(1000);
+               } else if(response_gps.equals(Status_1)){
+                  Serial.println("Kendaraan Dalam area peminjaman");
                }
             }
      }else{
