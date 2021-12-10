@@ -1,19 +1,34 @@
-
 #include <SoftwareSerial.h>
+#include <TinyGPS++.h>
+#include <AltSoftSerial.h>
 
 #include "SIM800L.h"
+#include <ArduinoJson.h>
 
 #define SIM800_RX_PIN 2
 #define SIM800_TX_PIN 3
 #define SIM800_RST_PIN 6
 #define Relay_Lock 12
 #define Relay_Warning 13
+
 const int data;
 
-const char APN[] = "byu";
-const char URL[] = "http://34.101.77.77/api/vehicle/status/6";
+const char APN[] = "internet";
+const char URL[] = "http://34.101.77.77/api/vehicle/status/1";
 
 SIM800L* sim800l;
+
+
+AltSoftSerial neogps;
+TinyGPSPlus gps;
+String latitude, longitude;
+
+//GPS Module RX pin to Arduino 9
+//GPS Module TX pin to Arduino 8
+const char GMAPS[] = "http://34.101.77.77/api/vehicle/status-gmaps/1?";
+const char CONTENT_TYPE[] = "application/x-www-form-urlencoded";
+
+  
 
 void setup() {  
   pinMode(Relay_Lock, OUTPUT);
@@ -23,7 +38,7 @@ void setup() {
   // Initialize Serial Monitor for debugging
   Serial.begin(115200);
   while(!Serial);
-
+  neogps.begin(9600);
   // Initialize a SoftwareSerial
   SoftwareSerial* serial = new SoftwareSerial(SIM800_RX_PIN, SIM800_TX_PIN);
   serial->begin(9600);
@@ -40,6 +55,25 @@ void setup() {
 }
  
 void loop() {
+    
+  //gps
+    boolean newData = false;
+    for (unsigned long start = millis(); millis() - start < 2000;){
+      while (neogps.available()){
+        if (gps.encode(neogps.read())){
+          newData = true;
+          break;
+        }
+      }
+    }
+  
+    if(true){
+      newData = false;
+      
+   latitude = String(gps.location.lat(), 6); // Latitude in degrees (double)
+   longitude = String(gps.location.lng(), 6); // Longitude in degrees (double)
+   }
+    
   // Establish GPRS connectivity (5 trials)
   bool connected = false;
   for(uint8_t i = 0; i < 5 && !connected; i++) {
@@ -74,11 +108,18 @@ void loop() {
      String response = sim800l->getDataReceived();
      String Status_1 = "1";
      String Status_2 = "2";
+
      
      if(response.equals(Status_1)){
       Serial.println("relay kunci on");
       digitalWrite(Relay_Lock, HIGH);
-          uint16_t rc = sim800l->doPost("http://34.101.77.77/api/vehicle/status-gmaps/1?lat=-4.54208&long=105.09133","application/json", "{}", 10000, 10000);
+          String payload;
+                 payload = "lat=";
+                 payload += latitude;
+                 payload += "&lon=";
+                 payload += longitude;
+                Serial.println(payload);
+          uint16_t rc = sim800l->doPost(GMAPS, CONTENT_TYPE, payload.c_str(), 10000, 10000);
            if(rc == 200) {
             // Success, output the data received on the serial
             Serial.print(F("HTTP POST successful ("));
